@@ -9,13 +9,20 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 
 public class GetThread implements Runnable {
     private final Gson gson;
-    private int n; // /get?from=n
+    private int n;// /get?from=n
 
-    public GetThread() {
+    private Set<String> usersList = new HashSet<>();
+
+    private String login ;
+
+    public GetThread(String login) {
         gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+        this.login = login;
     }
 
     @Override
@@ -25,23 +32,28 @@ public class GetThread implements Runnable {
                 URL url = new URL(Utils.getURL() + "/get?from=" + n);
                 HttpURLConnection http = (HttpURLConnection) url.openConnection();
 
-                InputStream is = http.getInputStream();
-                try {
+                try (InputStream is = http.getInputStream()) {
                     byte[] buf = responseBodyToArray(is);
                     String strBuf = new String(buf, StandardCharsets.UTF_8);
 
                     JsonMessages list = gson.fromJson(strBuf, JsonMessages.class);
                     if (list != null) {
                         for (Message m : list.getList()) {
-                            System.out.println(m);
-                            n++;
+                            if (m.getFrom().equals(login)) {
+                                System.out.println(m);
+                                n++;
+                            } else if (m.getTo().equals(login)) {
+                                System.out.println(m);
+                                n++;
+                            } else if (m.getTo().equals("All")) {
+                                System.out.println(m);
+                                n++;
+                            } else {
+                                n++;
+                            }
                         }
                     }
-
-                } finally {
-                    is.close();
                 }
-
                 Thread.sleep(500);
             }
         } catch (Exception ex) {
@@ -61,4 +73,31 @@ public class GetThread implements Runnable {
 
         return bos.toByteArray();
     }
+
+    public void getUsersList() throws IOException {
+        int firstMessage = 0;
+        URL url = new URL(Utils.getURL() + "/get?from=" + firstMessage);
+        HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+
+        try (InputStream inputStream = httpConn.getInputStream()) {
+            byte[] buffer = responseBodyToArray(inputStream);
+            String strBuffer = new String(buffer, StandardCharsets.UTF_8);
+
+            JsonMessages list = gson.fromJson(strBuffer, JsonMessages.class);
+            if (list != null) {
+                for (Message m : list.getList()) {
+                    usersList.add(m.getFrom());
+                }
+            } else {
+                usersList.add(login);
+            }
+        } finally {
+            System.out.println("All users: ");
+            for (String user : usersList) {
+                System.out.println("@" + user);
+            }
+        }
+    }
+
 }
+

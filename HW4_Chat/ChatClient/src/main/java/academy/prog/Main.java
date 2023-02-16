@@ -1,6 +1,7 @@
 package academy.prog;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Main {
@@ -9,20 +10,40 @@ public class Main {
 		try {
 			System.out.println("Enter your login: ");
 			String login = scanner.nextLine();
-	
-			Thread th = new Thread(new GetThread());
+
+			Thread th = new Thread(new GetThread(login));
 			th.setDaemon(true);
 			th.start();
 
-            System.out.println("Enter your message: ");
+			System.out.println("Enter your message: ");
 			while (true) {
-				String text = scanner.nextLine();
-				if (text.isEmpty()) break;
+				String allText = scanner.nextLine();
+				if (allText.isEmpty()) break;
 
 				// users
 				// @test Hello
 
-				Message m = new Message(login, text);
+				if (allText.equals("/users")) {
+					new GetThread(login).getUsersList();
+					continue;
+				}
+
+				String to = "All";
+				String textMessage = "";
+				if(allText.startsWith("@")) {
+					char[] textFromChar = allText.toCharArray();
+					for(int i = 0; i<textFromChar.length; i++) {
+						if(textFromChar[i]==' '){
+							to = new String (Arrays.copyOfRange(textFromChar,1,i));
+							textMessage = new String (Arrays.copyOfRange(textFromChar,i+1,textFromChar.length));
+							break;
+						}
+					}
+				} else {
+					textMessage = allText;
+				}
+
+				Message m = new Message(login, textMessage, to);
 				int res = m.send(Utils.getURL() + "/add");
 
 				if (res != 200) { // 200 OK
@@ -37,3 +58,4 @@ public class Main {
 		}
 	}
 }
+
